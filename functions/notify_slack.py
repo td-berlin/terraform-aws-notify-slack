@@ -36,6 +36,43 @@ def cloudwatch_notification(message, region):
         }
 
 
+def codedeploy_notification(subject, message):
+    client = boto3.client('codedeploy')
+    deploymentInfo = client.get_deployment(deploymentId=message['deploymentId'])['deploymentInfo']
+
+    states = {'CREATED': '#ff9900', 'SUCCEEDED': 'good', 'FAILED': 'danger'}
+
+    fields = [
+        { "title": "Status", "value": message['status'], "short": False },
+        { "title": "Application name", "value": message['applicationName'], "short": False },
+        { "title": "Deployment ID", "value": message['deploymentId'], "short": False },
+        { "title": "Description", "value": deploymentInfo['description'], "short": False },
+        { "title": "Initialized by", "value": deploymentInfo['creator'], "short": False },
+        { "title": "Created at", "value": message['createTime'], "short": True },
+        { "title": "Completed at", "value": message['completeTime'] if message['completeTime'] else "-", "short": True },
+        { "title": "Instances pending", "value": deploymentInfo['deploymentOverview']['Pending'], "short": True },
+        { "title": "Instances in progress", "value": deploymentInfo['deploymentOverview']['InProgress'], "short": True },
+        { "title": "Instances succeeded", "value": deploymentInfo['deploymentOverview']['Succeeded'], "short": True },
+        { "title": "Instances failed", "value": deploymentInfo['deploymentOverview']['Failed'], "short": True },
+        { "title": "Instances skipped", "value": deploymentInfo['deploymentOverview']['Skipped'], "short": True }
+    ]
+
+    actions = [
+        {
+          "type": "button",
+          "text": "CodeDeploy AWS console 📟",
+          "url": "https://" + message['region'] + ".console.aws.amazon.com/codesuite/codedeploy/deployments/" + message['deploymentId'] + "?region=" + message['region'],
+          "color": "#ff9900"
+        }
+    ]
+
+    return {
+       "color": states[message['status']],
+       "fallback": "CodeDeploy deployment {} notification".format(message['status']),
+       "fields": fields,
+       "actions": actions
+    }
+
 def default_notification(subject, message):
     return {
             "fallback": "A new message",
@@ -67,6 +104,10 @@ def notify_slack(subject, message, region):
     if "AlarmName" in message:
         notification = cloudwatch_notification(message, region)
         payload['text'] = "AWS CloudWatch notification - " + message["AlarmName"]
+        payload['attachments'].append(notification)
+    if "CodeDeploy" in subject:
+        notification = codedeploy_notification(subject, message)
+        payload['text'] = "CodeDeploy deployment notification for {}: {}".format(message['applicationName'], message['status'])
         payload['attachments'].append(notification)
     else:
         payload['text'] = "AWS notification"
