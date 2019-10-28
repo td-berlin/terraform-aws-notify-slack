@@ -18,6 +18,7 @@ Terraform 0.11. Pin module version to `~> v1.0`. Submit pull-requests to `terraf
 - [x] Most of Slack message options are customizable
 - [x] Support different types of SNS messages:
   - [x] AWS Cloudwatch
+  - [x] AWS CodeDeploy
   - [ ] [Send pull-request to add support of other message types](https://github.com/terraform-aws-modules/terraform-aws-notify-slack/pulls)
 
 ## Usage
@@ -92,6 +93,29 @@ $ terraform import module.MODULE_NAME.aws_cloudwatch_log_group.lambda /aws/lambd
 | this\_slack\_topic\_arn | The ARN of the SNS topic from which messages will be sent to Slack |
 
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+
+## AWS CodeDeploy support
+
+CodeDeploy notifications require additional permissions for retrieving deployment data:
+
+```hcl-terraform
+data "aws_iam_role" "lambda_codedeploy_notificaitons" {
+  name = module.notify_slack.lambda_iam_role_name
+}
+
+data "aws_iam_policy_document" "codedeploy_notificaitons" {
+  statement {
+    effect = "Allow"
+    actions = ["codedeploy:GetDeployment"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "deployment_info" {
+  role = data.aws_iam_role.lambda_codedeploy_notificaitons.name
+  policy = data.aws_iam_policy_document.codedeploy_notificaitons.json
+}
+``` 
 
 ## Authors
 
