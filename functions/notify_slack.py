@@ -105,7 +105,7 @@ def notify_slack(subject, message, region):
         notification = cloudwatch_notification(message, region)
         payload['text'] = "AWS CloudWatch notification - " + message["AlarmName"]
         payload['attachments'].append(notification)
-    if "CodeDeploy" in subject:
+    elif "CodeDeploy" in subject:
         notification = codedeploy_notification(subject, message)
         payload['text'] = "CodeDeploy deployment notification for {}: {}".format(message['applicationName'], message['status'])
         payload['attachments'].append(notification)
